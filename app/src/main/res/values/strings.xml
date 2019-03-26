@@ -7,4 +7,12 @@
     <string name="schedule_job">Schedule Job</string>
     <string name="cancel_jobs">Cancel Jobs</string>
     <string name="job_scheduled_message">Job Scheduled, job will run when the constraints are met.</string>
+    <string name="requires">Requires</string>
+    <string name="device_idle">Device Idle</string>
+    <string name="device_charging">Device Charging</string>
+    <string name="set_constraints">Please set at least one constraint</string>
+    <string name="jobs_cancelled">Jobs cancelled</string>
+    <string name="override_deadline">Override Deadline: </string>
+    <string name="not_set">Not set</string>
+    <string name="seconds">seconds</string>
 </resources>
