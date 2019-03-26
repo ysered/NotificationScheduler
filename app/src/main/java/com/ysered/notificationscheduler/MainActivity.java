@@ -19,12 +19,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private static final int JOB_ID = 0;
 
-    private enum JobState { SCHEDULED, STOPPED }
-
-    private JobState jobState = JobState.STOPPED;
-
-    private Button scheduleJobButton;
-    private Button cancelJobsButton;
     private RadioGroup networkOptionsRadioGroup;
     private JobScheduler scheduler;
     private Switch idleSwitch;
@@ -37,8 +31,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        scheduleJobButton = findViewById(R.id.scheduleButton);
-        cancelJobsButton = findViewById(R.id.cancelJobsButton);
+        Button scheduleJobButton = findViewById(R.id.scheduleButton);
+        Button cancelJobsButton = findViewById(R.id.cancelJobsButton);
         networkOptionsRadioGroup = findViewById(R.id.networkOptionsGroup);
         idleSwitch = findViewById(R.id.idleSwitch);
         chargingSwitch = findViewById(R.id.chargingSwitch);
@@ -65,7 +59,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
-        //toggleButtons(jobState);
         updateDeadlineLabel(seekBar.getProgress());
     }
 
@@ -83,36 +76,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void scheduleJob() {
         int selectedNetworkOption = getSelectedNetworkOption(networkOptionsRadioGroup);
-        boolean constraintSet = selectedNetworkOption != JobInfo.NETWORK_TYPE_NONE
-                || idleSwitch.isChecked()
-                || chargingSwitch.isChecked();
-
         int deadlineSeconds = seekBar.getProgress();
         boolean isDeadlineSet = deadlineSeconds > 0;
+
+        boolean constraintSet = selectedNetworkOption != JobInfo.NETWORK_TYPE_NONE
+                || idleSwitch.isChecked()
+                || chargingSwitch.isChecked()
+                || isDeadlineSet;
 
         if (constraintSet) {
             ComponentName serviceName = new ComponentName(getPackageName(),
                     NotificationJobService.class.getName());
 
-            JobInfo.Builder jobInfoBuilder = new JobInfo.Builder(JOB_ID, serviceName)
+            JobInfo jobInfo = new JobInfo.Builder(JOB_ID, serviceName)
                     .setRequiredNetworkType(selectedNetworkOption)
-                    .setRequiresDeviceIdle(idleSwitch.isChecked())
-                    .setRequiresCharging(chargingSwitch.isChecked());
+                    //.setOverrideDeadline(deadlineSeconds)
+                    //.setRequiresDeviceIdle(true) //idleSwitch.isChecked()
+                    .setRequiresCharging(true) //chargingSwitch.isChecked()
+                    .build();
 
-            if (isDeadlineSet) {
-                int deadlineMillis = deadlineSeconds * 1000;
-                jobInfoBuilder.setOverrideDeadline(deadlineMillis);
-            }
-
-            JobInfo jobInfo = jobInfoBuilder.build();
             scheduler = (JobScheduler) getSystemService(JOB_SCHEDULER_SERVICE);
             scheduler.schedule(jobInfo);
 
             Toast.makeText(this, R.string.job_scheduled_message, Toast.LENGTH_SHORT).show();
-            jobState = JobState.SCHEDULED;
         } else {
             Toast.makeText(this, R.string.set_constraints, Toast.LENGTH_SHORT).show();
-            jobState = JobState.STOPPED;
         }
     }
 
@@ -121,7 +109,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             scheduler.cancelAll();
             scheduler = null;
             Toast.makeText(this, R.string.jobs_cancelled, Toast.LENGTH_SHORT).show();
-            jobState = JobState.STOPPED;
         }
     }
 
@@ -154,18 +141,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         String text = head + tail;
         deadlineText.setText(text);
-    }
-
-    private void toggleButtons(JobState jobState) {
-        switch (jobState) {
-            case SCHEDULED:
-                scheduleJobButton.setEnabled(false);
-                cancelJobsButton.setEnabled(true);
-                break;
-            case STOPPED:
-                scheduleJobButton.setEnabled(true);
-                cancelJobsButton.setEnabled(false);
-                break;
-        }
     }
 }

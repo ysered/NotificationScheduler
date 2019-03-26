@@ -1,5 +1,6 @@
 package com.ysered.notificationscheduler;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -14,13 +15,26 @@ import androidx.core.app.NotificationCompat;
 
 public class NotificationJobService extends JobService {
 
+    private static final int NOTIFICATION_ID = 0;
     private static final String PRIMARY_CHANNEL_ID = "primary_notification_channel";
 
     private NotificationManager notificationManager;
+    private FakeDownloader task;
 
+    @SuppressLint("StaticFieldLeak")
     @Override
-    public boolean onStartJob(JobParameters params) {
+    public boolean onStartJob(final JobParameters params) {
         createNotificationChannel();
+
+        task = new FakeDownloader() {
+            @Override
+            protected void onPostExecute(Boolean isSuccess) {
+                super.onPostExecute(isSuccess);
+                notificationManager.cancel(NOTIFICATION_ID);
+                jobFinished(params, !isSuccess);
+            }
+        };
+        task.execute();
 
         Intent mainActivityIntent = new Intent(this, MainActivity.class);
         PendingIntent mainActivityPendingIntent = PendingIntent.getActivity(this, 0,
@@ -35,21 +49,24 @@ public class NotificationJobService extends JobService {
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .build();
 
-        notificationManager.notify(0, notification);
+        notificationManager.notify(NOTIFICATION_ID, notification);
 
-        return false;
+        return true;
     }
 
     @Override
     public boolean onStopJob(JobParameters params) {
-        return true;
+        if (task != null) {
+            task.cancel(true);
+        }
+        return false;
     }
 
     private void createNotificationChannel() {
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             NotificationChannel notificationChannel = new NotificationChannel(PRIMARY_CHANNEL_ID,
-                    "Job Service notificaiton", NotificationManager.IMPORTANCE_HIGH);
+                    "Job Service notification", NotificationManager.IMPORTANCE_HIGH);
             notificationChannel.enableLights(true);
             notificationChannel.setLightColor(Color.RED);
             notificationChannel.enableVibration(true);
